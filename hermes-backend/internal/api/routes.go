@@ -66,6 +66,26 @@ func SetupRouter(cfg *config.Config, log *logger.Logger, serviceService *service
 				services.GET("/:id", serviceHandler.GetServiceByID)
 				services.PUT("/:id", serviceHandler.UpdateService)
 				services.DELETE("/:id", serviceHandler.DeleteService)
+				services.POST("/bulk", serviceHandler.BulkRegisterService)
+				// Add this to your existing routes setup
+
+				// Service Discovery routes
+				discoveryHandler := handlers.NewServiceDiscoveryHandler(serviceService)
+				services.GET("/discovery", discoveryHandler.AdvancedSearch)
+
+				// Service Version routes
+				versionHandler := handlers.NewServiceVersionHandler(serviceService)
+				services.POST("/:id/versions", versionHandler.AddServiceVersion)
+				services.GET("/:id/versions", versionHandler.GetServiceVersions)
+				services.PUT("/:id/versions/:version/activate", versionHandler.ActivateServiceVersion)
+
+				// Service Dependency routes
+				dependencyHandler := handlers.NewServiceDependencyHandler(serviceService)
+				services.POST("/:id/dependencies", dependencyHandler.AddServiceDependency)
+				services.GET("/:id/dependencies", dependencyHandler.GetServiceDependencies)
+				services.GET("/:id/dependents", dependencyHandler.GetServiceDependents)
+				services.DELETE("/:id/dependencies/:dependency_id", dependencyHandler.RemoveServiceDependency)
+
 				// services.POST("/:id/health", serviceHandler.UpdateServiceHealth)
 			}
 

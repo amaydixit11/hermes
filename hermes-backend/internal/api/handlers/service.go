@@ -29,6 +29,7 @@ func (h *ServiceHandler) RegisterService(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	// TODO: Add validation for registration fields
 
 	service, err := h.service.RegisterService(c.Request.Context(), registration)
 	if err != nil {
@@ -41,6 +42,78 @@ func (h *ServiceHandler) RegisterService(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, service)
+}
+
+func (h *ServiceHandler) BulkRegisterService(c *gin.Context) {
+	var bulkRegistration models.BulkServiceRegistration
+	if err := c.ShouldBindJSON(&bulkRegistration); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid bulk registration data"})
+		return
+	}
+
+	type SuccessResult struct {
+		ID     string               `json:"id"`
+		Name   string               `json:"name"`
+		Status models.ServiceStatus `json:"status"`
+	}
+
+	type FailureResult struct {
+		Name  string `json:"name"`
+		Error string `json:"error"`
+	}
+
+	successful := []SuccessResult{}
+	failed := []FailureResult{}
+
+	for _, registration := range bulkRegistration.Services {
+		// Merge common metadata
+		if registration.Metadata == nil {
+			registration.Metadata = map[string]string{}
+		}
+		for k, v := range bulkRegistration.CommonMetadata {
+			if _, exists := registration.Metadata[k]; !exists {
+				registration.Metadata[k] = v
+			}
+		}
+
+		// Merge common tags
+		tagMap := map[string]bool{}
+		for _, tag := range registration.Tags {
+			tagMap[tag] = true
+		}
+		for _, tag := range bulkRegistration.CommonTags {
+			tagMap[tag] = true
+		}
+		registration.Tags = make([]string, 0, len(tagMap))
+		for tag := range tagMap {
+			registration.Tags = append(registration.Tags, tag)
+		}
+
+		// Register service
+		service, err := h.service.RegisterService(c.Request.Context(), registration)
+		if err != nil {
+			failed = append(failed, FailureResult{
+				Name:  registration.Name,
+				Error: err.Error(),
+			})
+			continue
+		}
+
+		successful = append(successful, SuccessResult{
+			ID:     service.ID,
+			Name:   service.Name,
+			Status: service.Status,
+		})
+	}
+
+	c.JSON(http.StatusMultiStatus, gin.H{
+		"successful":      successful,
+		"failed":          failed,
+		"total_submitted": len(bulkRegistration.Services),
+		"total_succeeded": len(successful),
+		"total_failed":    len(failed),
+	})
+
 }
 
 // GetServiceByID handles requests to get a service by ID
