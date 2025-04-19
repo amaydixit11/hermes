@@ -1,0 +1,32 @@
+# Hermes API Gateway Configuration
+
+# Environment (development, staging, production)
+environment: development
+
+# Server configuration
+server:
+  port: 8080
+  timeout_read: 10     # seconds
+  timeout_write: 10    # seconds
+  timeout_idle: 60     # seconds
+  timeout_shutdown: 15 # seconds
+
+# Database configuration
+database:
+  host: localhost
+  port: 5432
+  username: postgres
+  password: postgres  # Use environment variables in production
+  name: hermes
+  sslmode: disable    # Use 'require' in production
+
+# JWT configuration
+jwt:
+  secret: change_this_to_a_secure_random_string_in_production
+  expiry_hour: 24
+  
+health_check:
+  interval: 30s
+
+# Logging
+log_level: debug  # debug, info, warn, error
