@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -70,7 +71,7 @@ func main() {
 
 	// Start HTTP server with proper timeouts
 	srv := &http.Server{
-		Addr:         cfg.Server.Address,
+		Addr:         "localhost:" + strconv.Itoa(cfg.Server.Port),
 		Handler:      router,
 		ReadTimeout:  time.Duration(cfg.Server.TimeoutRead) * time.Second,
 		WriteTimeout: time.Duration(cfg.Server.TimeoutWrite) * time.Second,
@@ -79,7 +80,7 @@ func main() {
 
 	// Start server in goroutine
 	go func() {
-		log.Info("Starting server", "address", cfg.Server.Address)
+		log.Info("Starting server", "address", cfg.Server.Port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatal("Failed to start server", "error", err)
 		}

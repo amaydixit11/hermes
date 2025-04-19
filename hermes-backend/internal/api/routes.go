@@ -55,7 +55,7 @@ func SetupRouter(cfg *config.Config, log *logger.Logger, serviceService *service
 		// Protected routes
 		// Will require implementing auth middleware
 		protected := v1.Group("/")
-		protected.Use(middleware.Auth(cfg))
+		// protected.Use(middleware.Auth(cfg))
 		{
 			// Service routes
 			services := protected.Group("/services")

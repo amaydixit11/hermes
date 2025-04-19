@@ -26,7 +26,7 @@ jwt:
   expiry_hour: 24
   
 health_check:
-  interval: 30s
+  interval: 30
 
 # Logging
 log_level: debug  # debug, info, warn, error

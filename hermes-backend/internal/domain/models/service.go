@@ -2,6 +2,8 @@ package models
 
 import (
 	"time"
+
+	"github.com/lib/pq"
 )
 
 // Service represents a microservice in the system
@@ -13,7 +15,7 @@ type Service struct {
 	Type        string            `json:"type"`
 	Endpoint    string            `json:"endpoint" gorm:"not null"`
 	Metadata    map[string]string `json:"metadata" gorm:"serializer:json"`
-	Tags        []string          `json:"tags" gorm:"serializer:json"`
+	Tags        pq.StringArray    `gorm:"type:text[]"`
 	CreatedAt   time.Time         `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt   time.Time         `json:"updated_at" gorm:"autoUpdateTime"`
 	LastSeen    time.Time         `json:"last_seen"`

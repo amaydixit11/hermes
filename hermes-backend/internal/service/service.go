@@ -37,6 +37,7 @@ func (s *ServiceService) RegisterService(ctx context.Context, reg models.Service
 	if existing != nil {
 		return nil, errors.New("service with this name already exists")
 	}
+	// tags := pq.Array(reg.Tags)
 
 	// Create new service
 	service := &models.Service{
@@ -83,7 +84,7 @@ func (s *ServiceService) GetServiceByName(ctx context.Context, name string) (*mo
 }
 
 // ListServices lists all services with optional filters and pagination
-func (s *ServiceService) ListServices(ctx context.Context, params models.ServiceQueryParams) ([]models.Service, int, error) {
+func (s *ServiceService) ListServices(ctx context.Context, params models.ServiceQueryParams) ([]*models.Service, int64, error) {
 	services, total, err := s.repo.List(ctx, params)
 	if err != nil {
 		return nil, 0, errors.Wrap(err, "failed to list services")
@@ -110,10 +111,10 @@ func (s *ServiceService) UpdateService(ctx context.Context, id string, update mo
 		service.Endpoint = *update.Endpoint
 	}
 	if update.Metadata != nil {
-		service.Metadata = *update.Metadata
+		service.Metadata = update.Metadata
 	}
 	if update.Tags != nil {
-		service.Tags = *update.Tags
+		service.Tags = update.Tags
 	}
 
 	if err := s.repo.Update(ctx, service); err != nil {
@@ -135,7 +136,7 @@ func (s *ServiceService) DeleteService(ctx context.Context, id string) error {
 		return errors.Wrap(err, "failed to retrieve service")
 	}
 
-	if err := s.repo.Delete(ctx, service); err != nil {
+	if err := s.repo.Delete(ctx, service.ID); err != nil {
 		return errors.Wrap(err, "failed to delete service")
 	}
 
