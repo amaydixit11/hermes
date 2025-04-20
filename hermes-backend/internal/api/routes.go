@@ -12,7 +12,7 @@ import (
 )
 
 // SetupRouter configures the HTTP routes for the API
-func SetupRouter(cfg *config.Config, log *logger.Logger, serviceService *service.ServiceService) *gin.Engine {
+func SetupRouter(cfg *config.Config, log *logger.Logger, serviceService *service.ServiceService, healthService *service.HealthService) *gin.Engine {
 	// Set Gin mode based on environment
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
@@ -47,14 +47,14 @@ func SetupRouter(cfg *config.Config, log *logger.Logger, serviceService *service
 		// Authentication routes
 		// auth := v1.Group("/auth")
 		// {
-		// 	// These handlers will be implemented later
-		// 	// auth.POST("/login", handlers.Login)
-		// 	// auth.POST("/register", handlers.Register)
+		// These handlers will be implemented later
+		// auth.POST("/login", handlers.Login)
+		// auth.POST("/register", handlers.Register)
 		// }
 
 		// Protected routes
-		// Will require implementing auth middleware
 		protected := v1.Group("/")
+		// TODO: Add Auth
 		// protected.Use(middleware.Auth(cfg))
 		{
 			// Service routes
@@ -84,25 +84,48 @@ func SetupRouter(cfg *config.Config, log *logger.Logger, serviceService *service
 				services.POST("/:id/dependencies", dependencyHandler.AddServiceDependency)
 				services.GET("/:id/dependencies", dependencyHandler.GetServiceDependencies)
 				services.GET("/:id/dependents", dependencyHandler.GetServiceDependents)
-				services.DELETE("/:id/dependencies/:dependency_id", dependencyHandler.RemoveServiceDependency)
+				services.DELETE("/:id/dependencies/:dependency_id", dependencyHandler.RemoveServiceDependency) // api/router.go (add to your existing routes)
 
-				// services.POST("/:id/health", serviceHandler.UpdateServiceHealth)
+				// Create health handler
+				healthHandler := handlers.NewHealthHandler(healthService)
+
+				// Health check routes
+				services.POST("/:id/health", healthHandler.ReportServiceHealth)
+				services.GET("/:id/health/history", healthHandler.GetHealthHistory)
+
+				// Health checks configuration routes
+				services.POST("/:id/health-checks", healthHandler.CreateHealthCheck)
+				services.GET("/:id/health-checks", healthHandler.GetHealthChecks)
+				services.GET("/:id/health-checks/:check_id", healthHandler.GetHealthCheck)
+				services.PUT("/:id/health-checks/:check_id", healthHandler.UpdateHealthCheck)
+				services.DELETE("/:id/health-checks/:check_id", healthHandler.DeleteHealthCheck)
+
+				// Custom metrics routes
+				services.GET("/:id/metrics", healthHandler.GetCustomMetrics)
+				services.POST("/:id/metrics", healthHandler.CreateOrUpdateCustomMetric)
+
+				// Health thresholds routes
+				services.POST("/:id/thresholds", healthHandler.CreateHealthThreshold)
+				services.GET("/:id/thresholds", healthHandler.GetHealthThresholds)
+				services.PUT("/:id/thresholds/:threshold_id", healthHandler.UpdateHealthThreshold)
+				services.DELETE("/:id/thresholds/:threshold_id", healthHandler.DeleteHealthThreshold)
+
 			}
 
 			// // Gateway routes
 			// gateway := protected.Group("/gateway")
 			// {
-			// 	// These handlers will be implemented later
-			// 	// gateway.GET("/routes", handlers.ListRoutes)
-			// 	// gateway.POST("/routes", handlers.CreateRoute)
+			// These handlers will be implemented later
+			// gateway.GET("/routes", handlers.ListRoutes)
+			// gateway.POST("/routes", handlers.CreateRoute)
 			// }
 
 			// // Metrics routes
 			// metrics := protected.Group("/metrics")
 			// {
-			// 	// These handlers will be implemented later
-			// 	// metrics.GET("/", handlers.GetMetrics)
-			// 	// metrics.GET("/:service_id", handlers.GetServiceMetrics)
+			// These handlers will be implemented later
+			// metrics.GET("/", handlers.GetMetrics)
+			// metrics.GET("/:service_id", handlers.GetServiceMetrics)
 			// }
 		}
 	}

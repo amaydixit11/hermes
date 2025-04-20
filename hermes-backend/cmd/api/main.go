@@ -12,27 +12,23 @@ import (
 
 	"github.com/amaydixit11/hermes/hermes-backend/internal/api"
 	"github.com/amaydixit11/hermes/hermes-backend/internal/config"
-	"github.com/amaydixit11/hermes/hermes-backend/internal/monitoring"
 	repoPostgres "github.com/amaydixit11/hermes/hermes-backend/internal/repository/postgres"
 	"github.com/amaydixit11/hermes/hermes-backend/internal/service"
+	"github.com/amaydixit11/hermes/hermes-backend/internal/worker"
 	"github.com/amaydixit11/hermes/hermes-backend/pkg/logger"
 	gormpostgres "gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 func main() {
-	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
-		// Consistent logging instead of panic
 		log := logger.New("error")
 		log.Fatal("Failed to load configuration", "error", err)
 		return
 	}
 
-	// Initialize logger
 	log := logger.New(cfg.LogLevel)
-
 	log.Info("Configuration loaded successfully", "env", cfg.Environment)
 
 	// Connect to database
@@ -41,33 +37,23 @@ func main() {
 		log.Fatal("Failed to connect to database", "error", err)
 	}
 
-	// Get raw SQL DB to close on shutdown
 	sqlDB, err := db.DB()
 	if err != nil {
 		log.Fatal("Failed to retrieve SQL DB from GORM", "error", err)
 	}
 	defer sqlDB.Close()
 
-	// Initialize repositories
 	serviceRepo := repoPostgres.NewServiceRepository(db)
+	healthRepo := repoPostgres.NewHealthRepositoryGorm(db)
 
-	// Initialize services
 	serviceService := service.NewServiceService(serviceRepo, log)
+	healthService := service.NewHealthService(healthRepo, serviceRepo, log)
 
-	// Initialize health checker (interval assumed in config)
-	healthCheckInterval := cfg.HealthCheck.Interval
-	if healthCheckInterval == 0 {
-		healthCheckInterval = int(30 * time.Second / time.Second)
-	}
-	healthChecker := monitoring.NewHealthChecker(serviceRepo, log, time.Duration(healthCheckInterval)*time.Second)
-
-	// Start health checker
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	healthChecker.Start(ctx)
+	healthCheckManager := worker.NewHealthCheckManager(healthRepo, healthService, log)
+	go healthCheckManager.Start()
 
 	// Set up HTTP router
-	router := api.SetupRouter(cfg, log, serviceService)
+	router := api.SetupRouter(cfg, log, serviceService, healthService)
 
 	// Start HTTP server with proper timeouts
 	srv := &http.Server{
@@ -101,8 +87,7 @@ func main() {
 		log.Fatal("Server forced to shutdown", "error", err)
 	}
 
-	// Stop health checker
-	healthChecker.Stop()
+	healthCheckManager.Stop()
 
 	log.Info("Server exited gracefully")
 	defer log.Sync()
