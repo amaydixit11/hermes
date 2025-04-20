@@ -37,9 +37,9 @@ func (r *ServiceRepository) GetByID(ctx context.Context, id string) (*models.Ser
 	var service models.Service
 	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&service).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil // Return nil if service is not found
+			return nil, nil
 		}
-		return nil, err // Return error if something went wrong
+		return nil, err
 	}
 	return &service, nil
 }
@@ -49,9 +49,9 @@ func (r *ServiceRepository) GetByName(ctx context.Context, name string) (*models
 	var service models.Service
 	if err := r.db.WithContext(ctx).Where("name = ?", name).First(&service).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil // Return nil if service is not found
+			return nil, nil
 		}
-		return nil, err // Return error if something went wrong
+		return nil, err
 	}
 	return &service, nil
 }
@@ -71,7 +71,7 @@ func (r *ServiceRepository) List(ctx context.Context, params models.ServiceQuery
 		query = query.Where("type = ?", params.Type)
 	}
 	if len(params.Tags) > 0 {
-		query = query.Where("tags @> ?", params.Tags) // Array contains condition (if tags are stored as an array in DB)
+		query = query.Where("tags @> ?", params.Tags)
 	}
 	if params.Search != "" {
 		query = query.Where("name LIKE ?", "%"+params.Search+"%")
